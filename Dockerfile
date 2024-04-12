@@ -1,4 +1,4 @@
-FROM varnish:fresh-alpine
+FROM varnish:7.5.0-alpine
 
 # install build dependencies
 USER root
