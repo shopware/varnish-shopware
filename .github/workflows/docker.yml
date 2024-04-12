@@ -21,7 +21,7 @@ jobs:
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Build Docker Images
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           tags: ghcr.io/shopwarelabs/varnish
           cache-from: type=gha
