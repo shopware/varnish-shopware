@@ -48,7 +48,7 @@ docker run \
     # host ip where Shopware is
     -e SHOPWARE_BACKEND_HOST=host.docker.internal \
     -p 8080:80 \
-    ghcr.io/shopwarelabs/varnish:latest
+    ghcr.io/shopware/varnish:latest
 ```
 
 ## Additional environment variables
