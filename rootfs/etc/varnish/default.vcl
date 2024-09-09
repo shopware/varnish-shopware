@@ -17,9 +17,6 @@ acl purgers {
 }
 
 sub vcl_recv {
-    # Mitigate httpoxy application vulnerability, see: https://httpoxy.org/
-    unset req.http.Proxy;
-
     #  Ignore query strings that are only necessary for the js on the client. Customize as needed.
     if (req.url ~ "(\?|&)(pk_campaign|piwik_campaign|pk_kwd|piwik_kwd|pk_keyword|pixelId|kwid|kw|adid|chl|dv|nk|pa|camid|adgid|cx|ie|cof|siteurl|utm_[a-z]+|_ga|gclid)=") {
         # see rfc3986#section-2.3 "Unreserved Characters" for regex
@@ -169,14 +166,11 @@ sub vcl_backend_response {
     }
 
     # Allow items to be stale if needed.
-    set beresp.grace = 6h;
+    set beresp.grace = 24h;
 
     # Save the bereq.url so bans work efficiently
     set beresp.http.x-url = bereq.url;
     set beresp.http.X-Cacheable = "YES";
-
-    # Remove the exact PHP Version from the response for more security
-    unset beresp.http.x-powered-by;
 
     return (deliver);
 }
@@ -184,22 +178,6 @@ sub vcl_backend_response {
 sub vcl_deliver {
     ## we don't want the client to cache
     set resp.http.Cache-Control = "max-age=0, private";
-
-    # remove link header, if session is already started to save client resources
-    if (req.http.cookie ~ "session-") {
-        unset resp.http.Link;
-    }
-
-    # Set a cache header to allow us to inspect the response headers during testing
-    if (obj.hits > 0) {
-        unset resp.http.set-cookie;
-        set resp.http.X-Cache = "HIT";
-    }  else {
-        set resp.http.X-Cache = "MISS";
-    }
-
-    # Remove the exact PHP Version from the response for more security (e.g. 404 pages)
-    unset resp.http.x-powered-by;
 
     # invalidation headers are only for internal use
     unset resp.http.sw-invalidation-states;
