@@ -2,6 +2,7 @@ vcl 4.1;
 
 import std;
 import xkey;
+import cookie;
 
 # Specify your app nodes here. Use round-robin balancing to add more than one.
 backend default {
@@ -14,6 +15,7 @@ acl purgers {
     "127.0.0.1";
     "localhost";
     "::1";
+    "172.17.0.1";
 }
 
 sub vcl_recv {
@@ -33,7 +35,7 @@ sub vcl_recv {
 
     if (req.method == "BAN") {
         if (!client.ip ~ purgers) {
-            return (synth(405, "Method not allowed"));
+            return (synth(403, "Forbidden"));
         }
 
         ban("req.url ~ "+req.url);
@@ -52,13 +54,12 @@ sub vcl_recv {
           return (pipe);
     }
 
-    # We only deal with GET and HEAD by default
-    if (req.method != "GET" && req.method != "HEAD") {
+    if (req.http.Authorization) {
         return (pass);
     }
 
-    # Don't cache Authenticate & Authorization
-    if (req.http.Authenticate || req.http.Authorization) {
+    # We only deal with GET and HEAD by default
+    if (req.method != "GET" && req.method != "HEAD") {
         return (pass);
     }
 
@@ -68,8 +69,11 @@ sub vcl_recv {
         return (pass);
     }
 
-    # Collapse multiple cookie headers into one
-    std.collect(req.http.Cookie);
+    cookie.parse(req.http.cookie);
+
+    set req.http.cache-hash = cookie.get("sw-cache-hash");
+    set req.http.currency = cookie.get("sw-currency");
+    set req.http.states = cookie.get("sw-states");
 
     #  Ignore query strings that are only necessary for the js on the client. Customize as needed.
     if (req.url ~ "(\?|&)(pk_campaign|piwik_campaign|pk_kwd|piwik_kwd|pk_keyword|pixelId|kwid|kw|adid|chl|dv|nk|pa|camid|adgid|cx|ie|cof|siteurl|utm_[a-z]+|_ga|gclid)=") {
@@ -97,18 +101,16 @@ sub vcl_recv {
 
 sub vcl_hash {
     # Consider Shopware HTTP cache cookies
-    if (req.http.cookie ~ "sw-cache-hash=") {
-        hash_data("+context=" + regsub(req.http.cookie, "^.*?sw-cache-hash=([^;]*);*.*$", "\1"));
-    } elseif (req.http.cookie ~ "sw-currency=") {
-        hash_data("+currency=" + regsub(req.http.cookie, "^.*?sw-currency=([^;]*);*.*$", "\1"));
+    if (req.http.cache-hash != "") {
+        hash_data("+context=" + req.http.cache-hash);
+    } elseif (req.http.currency != "") {
+        hash_data("+currency=" + req.http.currency);
     }
 }
 
 sub vcl_hit {
   # Consider client states for response headers
-  if (req.http.cookie ~ "sw-states=") {
-     set req.http.states = regsub(req.http.cookie, "^.*?sw-states=([^;]*);*.*$", "\1");
-
+  if (req.http.states) {
      if (req.http.states ~ "logged-in" && obj.http.sw-invalidation-states ~ "logged-in" ) {
         return (pass);
      }
@@ -117,6 +119,12 @@ sub vcl_hit {
         return (pass);
      }
   }
+}
+
+sub vcl_backend_fetch {
+    unset bereq.http.cache-hash;
+    unset bereq.http.currency;
+    unset bereq.http.states;
 }
 
 sub vcl_backend_response {
