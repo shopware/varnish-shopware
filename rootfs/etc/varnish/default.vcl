@@ -17,26 +17,6 @@ acl purgers {
 }
 
 sub vcl_recv {
-    #  Ignore query strings that are only necessary for the js on the client. Customize as needed.
-    if (req.url ~ "(\?|&)(pk_campaign|piwik_campaign|pk_kwd|piwik_kwd|pk_keyword|pixelId|kwid|kw|adid|chl|dv|nk|pa|camid|adgid|cx|ie|cof|siteurl|utm_[a-z]+|_ga|gclid)=") {
-        # see rfc3986#section-2.3 "Unreserved Characters" for regex
-        set req.url = regsuball(req.url, "(pk_campaign|piwik_campaign|pk_kwd|piwik_kwd|pk_keyword|pixelId|kwid|kw|adid|chl|dv|nk|pa|camid|adgid|cx|ie|cof|siteurl|utm_[a-z]+|_ga|gclid)=[A-Za-z0-9\-\_\.\~]+&?", "");
-    }
-    set req.url = regsub(req.url, "(\?|\?&|&)$", "");
-
-    # Normalize query arguments
-    set req.url = std.querysort(req.url);
-
-    # Set a header announcing Surrogate Capability to the origin
-    set req.http.Surrogate-Capability = "shopware=ESI/1.0";
-
-    # Make sure that the client ip is forward to the client.
-    if (req.http.x-forwarded-for) {
-        set req.http.X-Forwarded-For = req.http.X-Forwarded-For + ", " + client.ip;
-    } else {
-        set req.http.X-Forwarded-For = client.ip;
-    }
-
     # Handle PURGE
     if (req.method == "PURGE") {
         if (client.ip !~ purgers) {
@@ -60,32 +40,16 @@ sub vcl_recv {
         return (synth(200, "BAN URLs containing (" + req.url + ") done."));
     }
 
-    # Normalize Accept-Encoding header
-    # straight from the manual: https://www.varnish-cache.org/docs/3.0/tutorial/vary.html
-    if (req.http.Accept-Encoding) {
-        if (req.url ~ "\.(jpg|png|gif|gz|tgz|bz2|tbz|mp3|ogg)$") {
-            # No point in compressing these
-            unset req.http.Accept-Encoding;
-        } elsif (req.http.Accept-Encoding ~ "gzip") {
-            set req.http.Accept-Encoding = "gzip";
-        } elsif (req.http.Accept-Encoding ~ "deflate") {
-            set req.http.Accept-Encoding = "deflate";
-        } else {
-            # unknown algorithm
-            unset req.http.Accept-Encoding;
-        }
-    }
-
+    # Only handle relevant HTTP request methods
     if (req.method != "GET" &&
         req.method != "HEAD" &&
         req.method != "PUT" &&
         req.method != "POST" &&
+        req.method != "PATCH" &&
         req.method != "TRACE" &&
         req.method != "OPTIONS" &&
-        req.method != "PATCH" &&
         req.method != "DELETE") {
-        /* Non-RFC2616 or CONNECT which is weird. */
-        return (pipe);
+          return (pipe);
     }
 
     # We only deal with GET and HEAD by default
@@ -102,6 +66,30 @@ sub vcl_recv {
     # Note: virtual URLs might bypass this rule (e.g. /en/checkout)
     if (req.url ~ "^/(checkout|account|admin|api)(/.*)?$") {
         return (pass);
+    }
+
+    # Collapse multiple cookie headers into one
+    std.collect(req.http.Cookie);
+
+    #  Ignore query strings that are only necessary for the js on the client. Customize as needed.
+    if (req.url ~ "(\?|&)(pk_campaign|piwik_campaign|pk_kwd|piwik_kwd|pk_keyword|pixelId|kwid|kw|adid|chl|dv|nk|pa|camid|adgid|cx|ie|cof|siteurl|utm_[a-z]+|_ga|gclid)=") {
+        # see rfc3986#section-2.3 "Unreserved Characters" for regex
+        set req.url = regsuball(req.url, "(pk_campaign|piwik_campaign|pk_kwd|piwik_kwd|pk_keyword|pixelId|kwid|kw|adid|chl|dv|nk|pa|camid|adgid|cx|ie|cof|siteurl|utm_[a-z]+|_ga|gclid)=[A-Za-z0-9\-\_\.\~]+&?", "");
+    }
+
+    set req.url = regsub(req.url, "(\?|\?&|&)$", "");
+
+    # Normalize query arguments
+    set req.url = std.querysort(req.url);
+
+    # Set a header announcing Surrogate Capability to the origin
+    set req.http.Surrogate-Capability = "shopware=ESI/1.0";
+
+    # Make sure that the client ip is forward to the client.
+    if (req.http.x-forwarded-for) {
+        set req.http.X-Forwarded-For = req.http.X-Forwarded-For + ", " + client.ip;
+    } else {
+        set req.http.X-Forwarded-For = client.ip;
     }
 
     return (hash);
@@ -132,15 +120,12 @@ sub vcl_hit {
 }
 
 sub vcl_backend_response {
-    # Fix Vary Header in some cases
-    # https://www.varnish-cache.org/trac/wiki/VCLExampleFixupVary
-    if (beresp.http.Vary ~ "User-Agent") {
-        set beresp.http.Vary = regsub(beresp.http.Vary, ",? *User-Agent *", "");
-        set beresp.http.Vary = regsub(beresp.http.Vary, "^, *", "");
-        if (beresp.http.Vary == "") {
-            unset beresp.http.Vary;
-        }
-    }
+    # Serve stale content for three days after object expiration
+	# Perform asynchronous revalidation while stale content is served
+    set beresp.grace = 3d;
+
+    unset beresp.http.X-Powered-By;
+    unset beresp.http.Server;
 
     if (beresp.http.Surrogate-Control ~ "ESI/1.0") {
         unset beresp.http.Surrogate-Control;
@@ -148,40 +133,27 @@ sub vcl_backend_response {
         return (deliver);
     }
 
-    # Respect the Cache-Control=private header from the backend
-    if (
-        beresp.http.Pragma        ~ "no-cache" ||
-        beresp.http.Cache-Control ~ "no-cache" ||
-        beresp.http.Cache-Control ~ "private"
-    ) {
-        set beresp.ttl = 0s;
-        set beresp.http.X-Cacheable = "NO:Cache-Control=private";
-        set beresp.uncacheable = true;
-        return (deliver);
+    if (bereq.url ~ "\.js$" || beresp.http.content-type ~ "text") {
+        set beresp.do_gzip = true;
     }
 
-    # strip the cookie before the image is inserted into cache.
-    if (bereq.url ~ "\.(png|gif|jpg|swf|css|js|webp)$") {
-        unset beresp.http.set-cookie;
+    if (beresp.ttl > 0s && (bereq.method == "GET" || bereq.method == "HEAD")) {
+        unset beresp.http.Set-Cookie;
     }
-
-    # Allow items to be stale if needed.
-    set beresp.grace = 24h;
-
-    # Save the bereq.url so bans work efficiently
-    set beresp.http.x-url = bereq.url;
-    set beresp.http.X-Cacheable = "YES";
-
-    return (deliver);
 }
 
 sub vcl_deliver {
     ## we don't want the client to cache
-    set resp.http.Cache-Control = "max-age=0, private";
+    if (resp.http.Cache-Control !~ "private" && req.url !~ "^/(theme|media|thumbnail|bundles)/") {
+        set resp.http.Pragma = "no-cache";
+        set resp.http.Expires = "-1";
+        set resp.http.Cache-Control = "no-store, no-cache, must-revalidate, max-age=0";
+    }
 
     # invalidation headers are only for internal use
     unset resp.http.sw-invalidation-states;
     unset resp.http.xkey;
-
-    set resp.http.X-Cache-Hits = obj.hits;
+    unset resp.http.X-Varnish;
+    unset resp.http.Via;
+    unset resp.http.Link;
 }

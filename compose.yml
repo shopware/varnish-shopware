@@ -1,0 +1,12 @@
+services:
+  varnish:
+    image: local/varnish
+    build: .
+    environment:
+      SHOPWARE_BACKEND_HOST: host.docker.internal
+    ports:
+      - "80:80"
+    develop:
+      watch:
+        - path: rootfs
+          action: rebuild
