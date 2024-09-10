@@ -15,7 +15,7 @@ acl purgers {
     "127.0.0.1";
     "localhost";
     "::1";
-    "172.17.0.1";
+    __SHOPWARE_ALLOWED_PURGER_IP__;
 }
 
 sub vcl_recv {
@@ -133,7 +133,6 @@ sub vcl_backend_fetch {
 
 sub vcl_backend_response {
     # Serve stale content for three days after object expiration
-	# Perform asynchronous revalidation while stale content is served
     set beresp.grace = 3d;
 
     unset beresp.http.X-Powered-By;

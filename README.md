@@ -56,6 +56,9 @@ docker run \
 - `SHOPWARE_BACKEND_HOST` - The host of the Shopware backend. Default: `localhost`
 - `SHOPWARE_BACKEND_PORT` - The port of the Shopware backend. Default: `8000`
 - `SHOPWARE_SOFT_PURGE` - If set to `1`, the soft purge feature is enabled. Default: `0`
+- `SHOPWARE_ALLOWED_PURGER_IP` - The IP address of the allowed purger. Default: `"127.0.0.1"`
+
+The `SHOPWARE_ALLOWED_PURGER_IP` can be a single IP like `"172.17.0.1"` or a subnet like `"172.17.0.0"/24`. Take care that the ip address inside the environment variable needs to be double quoted.
 
 ## Further information
 
