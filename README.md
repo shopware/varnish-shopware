@@ -16,7 +16,7 @@ shopware:
             use_varnish_xkey: true
             hosts:
                 # address to this varnish container or all varnish containers
-                - localhost:6081
+                - localhost
 ```
 
 </details>
@@ -33,7 +33,7 @@ storefront:
         use_varnish_xkey: true
         hosts:
             # address to this varnish container or all varnish containers
-            - localhost:6081
+            - localhost
 ```
 
 </details>
