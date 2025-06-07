@@ -10,6 +10,13 @@ The containing VCL is for the usage with xkeys.
 # config/packages/varnish.yaml
 
 shopware:
+    # Cache tagging must be disabled with xkey config
+    cache:
+        tagging:
+            each_config: false
+            each_snippet: false
+            each_theme_config: false
+
     http_cache:
         reverse_proxy:
             enabled: true
@@ -17,6 +24,7 @@ shopware:
             hosts:
                 # address to this varnish container or all varnish containers
                 - localhost
+                # - varnish
 ```
 
 </details>
@@ -39,6 +47,18 @@ storefront:
 </details>
 
 
+## Environment variables
+
+- `SHOPWARE_BACKEND_HOST` - The host of the Shopware backend. Default: `localhost`
+- `SHOPWARE_BACKEND_PORT` - The port of the Shopware backend. Default: `8000`
+- `SHOPWARE_SOFT_PURGE` - If set to `1`, the soft purge feature is enabled. Default: `0`
+- `SHOPWARE_ALLOWED_PURGER_IP` - The IP address or Docker service name of the allowed purger. Default: `"127.0.0.1"`
+- `VARNISH_SIZE` - The size of the Varnish cache. Default: `128m` (belongs to Varnish, not this image)
+
+The `SHOPWARE_ALLOWED_PURGER_IP` can be a single IP like `"172.17.0.1"`, a subnet like `"172.17.0.0"/24` or any hostname like `shopware` inside the docker network. Take care that the ip address inside the environment variable needs to be double quoted.
+
+
+
 ## Example usage
 
 ```bash
@@ -51,14 +71,32 @@ docker run \
     ghcr.io/shopware/varnish:latest
 ```
 
-## Additional environment variables
 
-- `SHOPWARE_BACKEND_HOST` - The host of the Shopware backend. Default: `localhost`
-- `SHOPWARE_BACKEND_PORT` - The port of the Shopware backend. Default: `8000`
-- `SHOPWARE_SOFT_PURGE` - If set to `1`, the soft purge feature is enabled. Default: `0`
-- `SHOPWARE_ALLOWED_PURGER_IP` - The IP address of the allowed purger. Default: `"127.0.0.1"`
-
-The `SHOPWARE_ALLOWED_PURGER_IP` can be a single IP like `"172.17.0.1"` or a subnet like `"172.17.0.0"/24`. Take care that the ip address inside the environment variable needs to be double quoted.
+## Compose example
+```yaml
+services:
+   php:
+     image: FROM shopware/docker-base:8.3-nginx
+     networks:
+        app:
+     
+   varnish:
+       container_name: sw_varnish
+       image: ghcr.io/shopware/varnish:latest
+       restart: unless-stopped
+       environment:
+           SHOPWARE_BACKEND_HOST: php
+           SHOPWARE_BACKEND_PORT: 8000
+           SHOPWARE_ALLOWED_PURGER_IP: "\"php\""
+           VARNISH_SIZE: 4G
+       ports:
+           - 8000:80
+       depends_on:
+           - php
+       networks:
+           app:
+           proxy:
+```
 
 ## Further information
 
