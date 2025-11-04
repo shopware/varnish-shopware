@@ -71,11 +71,14 @@ sub vcl_recv {
 
     cookie.parse(req.http.cookie);
 
-    set req.http.cache-hash = cookie.get("sw-cache-hash");
-    set req.http.currency = cookie.get("sw-currency");
-    set req.http.states = cookie.get("sw-states");
+    // set cache-hash cookie value to header for hashing
+    // if header is provided directly the header will take precedence
+    if (!req.http.sw-cache-hash) {
+        set req.http.sw-cache-hash = cookie.get("sw-cache-hash");
+    }
 
-    if (req.url == "/widgets/checkout/info" && !req.http.states ~ "cart-filled") {
+    // as soon as the cart is filled we get a cache hash
+    if (req.url == "/widgets/checkout/info" && req.http.sw-cache-hash == "") {
         return (synth(204, ""));
     }
 
@@ -101,34 +104,6 @@ sub vcl_recv {
     }
 
     return (hash);
-}
-
-sub vcl_hash {
-    # Consider Shopware HTTP cache cookies
-    if (req.http.cache-hash != "") {
-        hash_data("+context=" + req.http.cache-hash);
-    } elseif (req.http.currency != "") {
-        hash_data("+currency=" + req.http.currency);
-    }
-}
-
-sub vcl_hit {
-  # Consider client states for response headers
-  if (req.http.states) {
-     if (req.http.states ~ "logged-in" && obj.http.sw-invalidation-states ~ "logged-in" ) {
-        return (pass);
-     }
-
-     if (req.http.states ~ "cart-filled" && obj.http.sw-invalidation-states ~ "cart-filled" ) {
-        return (pass);
-     }
-  }
-}
-
-sub vcl_backend_fetch {
-    unset bereq.http.cache-hash;
-    unset bereq.http.currency;
-    unset bereq.http.states;
 }
 
 sub vcl_backend_response {
@@ -161,8 +136,6 @@ sub vcl_deliver {
         set resp.http.Cache-Control = "no-store, no-cache, must-revalidate, max-age=0";
     }
 
-    # invalidation headers are only for internal use
-    unset resp.http.sw-invalidation-states;
     unset resp.http.xkey;
     unset resp.http.X-Varnish;
     unset resp.http.Via;
