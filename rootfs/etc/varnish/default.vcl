@@ -71,13 +71,21 @@ sub vcl_recv {
 
     cookie.parse(req.http.cookie);
 
-    // set cache-hash cookie value to header for hashing
-    // if header is provided directly the header will take precedence
+    # set cache-hash cookie value to header for hashing 1Code has comments. Press enter to view.
+    # if header is provided directly the header will take precedence
     if (!req.http.sw-cache-hash) {
         set req.http.sw-cache-hash = cookie.get("sw-cache-hash");
     }
 
-    // as soon as the cart is filled we get a cache hash
+    # immediately pass when hash indicates that the content should not be cached
+    # note that cache-hash = "not-cacheable" is used to indicate an application state in which the cache should be passed
+    # we can not use cache-control headers in that case, as reverse proxies expect to always get the same cache-control headers based on the route
+    # dynamically changing the cache-control header is not supported
+    if (req.http.sw-cache-hash == "not-cacheable") {
+        return (pass);
+    }
+
+    # as soon as the cart is filled we get a cache hash
     if (req.url == "/widgets/checkout/info" && req.http.sw-cache-hash == "") {
         return (synth(204, ""));
     }
