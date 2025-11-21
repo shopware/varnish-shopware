@@ -74,7 +74,7 @@ sub vcl_recv {
 
     # set cache-hash cookie value to header for hashing based on vary header
     # if header is provided directly the header will take precedence
-    if (std.strlen(req.http.sw-cache-hash) == 0) {
+    if (!req.http.sw-cache-hash) {
         set req.http.sw-cache-hash = cookie.get("sw-cache-hash");
     }
 
