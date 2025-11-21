@@ -86,11 +86,10 @@ sub vcl_recv {
         return (pass);
     }
 
-    set req.http.cache-hash = cookie.get("sw-cache-hash");
     set req.http.currency = cookie.get("sw-currency");
     set req.http.states = cookie.get("sw-states");
 
-    if (req.url == "/widgets/checkout/info" && !req.http.states ~ "cart-filled") {
+    if (req.url == "/widgets/checkout/info" && (req.http.sw-cache-hash == "" || (cookie.isset("sw-states") && !req.http.states ~ "cart-filled"))) {
         return (synth(204, ""));
     }
 
