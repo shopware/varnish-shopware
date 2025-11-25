@@ -63,7 +63,8 @@ sub vcl_recv {
         return (pass);
     }
 
-    # Always pass these paths directly to php without caching
+    # Micro-optimization: Always pass these paths directly to php without caching
+    # to prevent hashing and cache lookup overhead
     # Note: virtual URLs might bypass this rule (e.g. /en/checkout)
     if (req.url ~ "^/(checkout|account|admin|api)(/.*)?$") {
         return (pass);
@@ -71,11 +72,24 @@ sub vcl_recv {
 
     cookie.parse(req.http.cookie);
 
-    set req.http.cache-hash = cookie.get("sw-cache-hash");
+    # set cache-hash cookie value to header for hashing based on vary header
+    # if header is provided directly the header will take precedence
+    if (!req.http.sw-cache-hash) {
+        set req.http.sw-cache-hash = cookie.get("sw-cache-hash");
+    }
+
+    # immediately pass when hash indicates that the content should not be cached
+    # note that cache-hash = "not-cacheable" is used to indicate an application state in which the cache should be passed
+    # we can not use cache-control headers in that case, as reverse proxies expect to always get the same cache-control headers based on the route
+    # dynamically changing the cache-control header is not supported
+    if (req.http.sw-cache-hash == "not-cacheable") {
+        return (pass);
+    }
+
     set req.http.currency = cookie.get("sw-currency");
     set req.http.states = cookie.get("sw-states");
 
-    if (req.url == "/widgets/checkout/info" && !req.http.states ~ "cart-filled") {
+    if (req.url == "/widgets/checkout/info" && (req.http.sw-cache-hash == "" || (cookie.isset("sw-states") && !req.http.states ~ "cart-filled"))) {
         return (synth(204, ""));
     }
 
@@ -105,8 +119,8 @@ sub vcl_recv {
 
 sub vcl_hash {
     # Consider Shopware HTTP cache cookies
-    if (req.http.cache-hash != "") {
-        hash_data("+context=" + req.http.cache-hash);
+    if (req.http.sw-cache-hash != "") {
+        hash_data("+context=" + req.http.sw-cache-hash);
     } elseif (req.http.currency != "") {
         hash_data("+currency=" + req.http.currency);
     }
@@ -126,7 +140,6 @@ sub vcl_hit {
 }
 
 sub vcl_backend_fetch {
-    unset bereq.http.cache-hash;
     unset bereq.http.currency;
     unset bereq.http.states;
 }
