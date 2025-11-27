@@ -5,6 +5,7 @@ set -eo pipefail
 sed -i "s|__SHOPWARE_BACKEND_HOST__|${SHOPWARE_BACKEND_HOST}|g" /etc/varnish/default.vcl
 sed -i "s|__SHOPWARE_BACKEND_PORT__|${SHOPWARE_BACKEND_PORT}|g" /etc/varnish/default.vcl
 sed -i 's|__SHOPWARE_ALLOWED_PURGER_IP__|'"${SHOPWARE_ALLOWED_PURGER_IP}"'|g' /etc/varnish/default.vcl
+sed -i 's|__SHOPWARE_CACHE_HASH_SECRET__|'"${SHOPWARE_CACHE_HASH_SECRET}"'|g' /etc/varnish/default.vcl
 
 if [[ "${SHOPWARE_SOFT_PURGE}" ]]; then
     sed -i "s|xkey.purge|xkey.softpurge|g" /etc/varnish/default.vcl

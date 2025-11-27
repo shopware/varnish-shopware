@@ -4,10 +4,12 @@ FROM varnish:8.0.0-alpine
 USER root
 RUN set -e; \
     apk upgrade --no-cache; \
-    apk add --no-cache $VMOD_DEPS; \
+    apk add --no-cache $VMOD_DEPS \
+           libmhash-dev --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing/; \
     \
     # install one, possibly multiple vmods
     install-vmod https://github.com/varnish/varnish-modules/releases/download/0.27.0/varnish-modules-0.27.0.tar.gz; \
+    install-vmod https://github.com/varnish/libvmod-digest/releases/download/libvmod-digest-1.0.3/libvmod-digest-1.0.3.tar.gz; \
     \
     # clean up
     apk del --no-network $VMOD_DEPS
