@@ -2,11 +2,9 @@ name: Build Docker
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 2 * * *'
   push:
     branches:
-      - main
+      - 6.8
     paths:
       - Dockerfile
 jobs:
@@ -29,8 +27,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           tags:
-              - ghcr.io/shopware/varnish:latest
-              - ghcr.io/shopware/varnish:6.7
+              - ghcr.io/shopware/varnish:6.8
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
