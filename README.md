@@ -98,6 +98,17 @@ services:
            proxy:
 ```
 
+## Versioning
+
+The `latest` tag of this image is always compatible with the latest Shopware version.
+There are tags for all supported Shopware versions available, e.g. `6.6` or `6.7`, or unreleased versions like `dev-6.8`.
+
+### Branching
+
+The `main` branch always contains the latest version of Shopware.
+When there is a breaking change in the config a new branch is created for the upcoming Shopware version, e.g. `6.8`. 
+Once the Shopware version is released, the branch is merged back into `main`, and the older version is maintained via a separate branch, e.g. `6.7`.
+
 ## Further information
 
 As this image bases on the Official Varnish image, you can use all options available there. For more information, please visit the [official Varnish image documentation](https://hub.docker.com/_/varnish).
