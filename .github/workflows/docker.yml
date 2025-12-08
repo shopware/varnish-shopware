@@ -28,9 +28,7 @@ jobs:
       - name: Build Docker Images
         uses: docker/build-push-action@v6
         with:
-          tags:
-              - ghcr.io/shopware/varnish:latest
-              - ghcr.io/shopware/varnish:6.7
+          tags: ghcr.io/shopware/varnish:latest, ghcr.io/shopware/varnish:6.7
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64,linux/arm64
