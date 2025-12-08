@@ -34,7 +34,7 @@ sub vcl_recv {
     }
 
     if (req.method == "BAN") {
-        if (!client.ip ~ purgers) {
+        if (client.ip !~ purgers) {
             return (synth(403, "Forbidden"));
         }
 
@@ -89,7 +89,7 @@ sub vcl_recv {
     set req.http.currency = cookie.get("sw-currency");
     set req.http.states = cookie.get("sw-states");
 
-    if (req.url == "/widgets/checkout/info" && (req.http.sw-cache-hash == "" || (cookie.isset("sw-states") && !req.http.states ~ "cart-filled"))) {
+    if (req.url == "/widgets/checkout/info" && (req.http.sw-cache-hash == "" || (cookie.isset("sw-states") && req.http.states !~ "cart-filled"))) {
         return (synth(204, ""));
     }
 
