@@ -3,6 +3,8 @@ vcl 4.1;
 import std;
 import xkey;
 import cookie;
+import var;
+import digest;
 
 # Specify your app nodes here. Use round-robin balancing to add more than one.
 backend default {
@@ -84,6 +86,21 @@ sub vcl_recv {
     # dynamically changing the cache-control header is not supported
     if (req.http.sw-cache-hash == "not-cacheable") {
         return (pass);
+    }
+
+    // validate that cache hash was signed by app server
+    var.set("cache_hash_secret", "__SHOPWARE_CACHE_HASH_SECRET__");
+    if (var.get("cache_hash_secret") && req.http.sw-cache-hash != "")  {
+        // client did not provide the signature, pass the cache
+        if (!cookie.get("sw-cache-hash-signature")) {
+            return (pass);
+        }
+
+        var.set("expected_signature", digest.hmac_sha256(var.get("cache_hash_secret"), req.http.sw-cache-hash + cookie.get("session-")));
+        // provided signature does not match expected, pass the cache
+        if (cookie.get("sw-cache-hash-signature") != var.get("expected_signature")) {
+            return (pass);
+        }
     }
 
     set req.http.currency = cookie.get("sw-currency");
