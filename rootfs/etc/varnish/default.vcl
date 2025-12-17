@@ -114,6 +114,7 @@ sub vcl_backend_response {
     unset beresp.http.X-Powered-By;
     unset beresp.http.Server;
 
+    # This should happen before any early return via deliver, so that ESI can still be processed
     if (beresp.http.Surrogate-Control ~ "ESI/1.0") {
         unset beresp.http.Surrogate-Control;
         set beresp.do_esi = true;
