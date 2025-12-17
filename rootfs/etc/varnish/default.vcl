@@ -63,7 +63,8 @@ sub vcl_recv {
         return (pass);
     }
 
-    # Always pass these paths directly to php without caching
+    # Micro-optimization: Always pass these paths directly to php without caching
+    # to prevent hashing and cache lookup overhead
     # Note: virtual URLs might bypass this rule (e.g. /en/checkout)
     if (req.url ~ "^/(checkout|account|admin|api)(/.*)?$") {
         return (pass);
@@ -71,7 +72,7 @@ sub vcl_recv {
 
     cookie.parse(req.http.cookie);
 
-    # set cache-hash cookie value to header for hashing 1Code has comments. Press enter to view.
+    # set cache-hash cookie value to header for hashing based on vary header
     # if header is provided directly the header will take precedence
     if (!req.http.sw-cache-hash) {
         set req.http.sw-cache-hash = cookie.get("sw-cache-hash");
@@ -116,7 +117,6 @@ sub vcl_backend_response {
     if (beresp.http.Surrogate-Control ~ "ESI/1.0") {
         unset beresp.http.Surrogate-Control;
         set beresp.do_esi = true;
-        return (deliver);
     }
 
     # Reducing hit-for-miss duration for dynamically uncacheable responses
