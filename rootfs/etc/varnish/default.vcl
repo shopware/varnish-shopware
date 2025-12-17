@@ -143,6 +143,12 @@ sub vcl_backend_response {
     unset beresp.http.X-Powered-By;
     unset beresp.http.Server;
 
+
+    if (beresp.http.Surrogate-Control ~ "ESI/1.0") {
+        unset beresp.http.Surrogate-Control;
+        set beresp.do_esi = true;
+    }
+
     # Reducing hit-for-miss duration for dynamically uncacheable responses
     if (beresp.http.sw-dynamic-cache-bypass == "1") {
         # Mark as "Hit-For-Miss" for the next n seconds
@@ -150,11 +156,6 @@ sub vcl_backend_response {
         set beresp.uncacheable = true;
         unset beresp.http.sw-dynamic-cache-bypass;
         return (deliver);
-    }
-
-    if (beresp.http.Surrogate-Control ~ "ESI/1.0") {
-        unset beresp.http.Surrogate-Control;
-        set beresp.do_esi = true;
     }
 
     if (bereq.url ~ "\.js$" || beresp.http.content-type ~ "text") {
