@@ -78,14 +78,6 @@ sub vcl_recv {
         set req.http.sw-cache-hash = cookie.get("sw-cache-hash");
     }
 
-    # immediately pass when hash indicates that the content should not be cached
-    # note that cache-hash = "not-cacheable" is used to indicate an application state in which the cache should be passed
-    # we can not use cache-control headers in that case, as reverse proxies expect to always get the same cache-control headers based on the route
-    # dynamically changing the cache-control header is not supported
-    if (req.http.sw-cache-hash == "not-cacheable") {
-        return (pass);
-    }
-
     # as soon as the cart is filled we get a cache hash
     if (req.url == "/widgets/checkout/info" && req.http.sw-cache-hash == "") {
         return (synth(204, ""));
@@ -122,6 +114,15 @@ sub vcl_backend_response {
     unset beresp.http.X-Powered-By;
     unset beresp.http.Server;
 
+    # Reducing hit-for-miss duration for dynamically uncacheable responses
+    if (beresp.http.sw-dynamic-cache-bypass == "1") {
+        # Mark as "Hit-For-Miss" for the next n seconds
+        set beresp.ttl = 1s;
+        set beresp.uncacheable = true;
+        unset beresp.http.sw-dynamic-cache-bypass;
+        return (deliver);
+    }
+
     if (beresp.http.Surrogate-Control ~ "ESI/1.0") {
         unset beresp.http.Surrogate-Control;
         set beresp.do_esi = true;
@@ -137,8 +138,8 @@ sub vcl_backend_response {
 }
 
 sub vcl_deliver {
-    ## we don't want the client to cache
-    if (resp.http.Cache-Control !~ "private" && req.url !~ "^/(theme|media|thumbnail|bundles)/") {
+    ## we don't want the client to cache anything except assets and store-api responses
+    if (resp.http.Cache-Control !~ "private" && req.url !~ "^/(theme|media|thumbnail|bundles|store-api)/") {
         set resp.http.Pragma = "no-cache";
         set resp.http.Expires = "-1";
         set resp.http.Cache-Control = "no-store, no-cache, must-revalidate, max-age=0";
