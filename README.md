@@ -4,7 +4,7 @@ The image bases on the official [Varnish image](https://hub.docker.com/_/varnish
 The containing VCL is for the usage with xkeys.
 
 <details>
-  <summary>Config for Shopware 6.6</summary>
+  <summary>Config for Shopware 6.6 to 6.7</summary>
 
 ```yaml
 # config/packages/varnish.yaml
@@ -100,8 +100,8 @@ services:
 
 ## Versioning
 
-The `latest` tag of this image is always compatible with the latest Shopware version.
-There are tags for all supported Shopware versions available, e.g. `6.6` or `6.7`, or unreleased versions like `dev-6.8`.
+There are tags for all supported Shopware versions available, e.g. `6.7`, or unreleased versions like `6.8`.
+A list of available tags can be viewed at <https://ghcr.io/shopware/varnish>.
 
 ### Branching
 
