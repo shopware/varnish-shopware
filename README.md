@@ -4,7 +4,26 @@ The image bases on the official [Varnish image](https://hub.docker.com/_/varnish
 The containing VCL is for the usage with xkeys.
 
 <details>
-  <summary>Config for Shopware 6.6 to 6.7</summary>
+  <summary>Config for Shopware 6.7</summary>
+
+```yaml
+# config/packages/varnish.yaml
+
+shopware:
+    http_cache:
+        reverse_proxy:
+            enabled: true
+            use_varnish_xkey: true
+            hosts:
+                # address to this varnish container or all varnish containers
+                - localhost
+                # - varnish
+```
+
+</details>
+
+<details>
+  <summary>Config for Shopware 6.6</summary>
 
 ```yaml
 # config/packages/varnish.yaml
