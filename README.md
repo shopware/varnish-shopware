@@ -13,7 +13,6 @@ shopware:
     http_cache:
         reverse_proxy:
             enabled: true
-            use_varnish_xkey: true
             hosts:
                 # address to this varnish container or all varnish containers
                 - localhost
