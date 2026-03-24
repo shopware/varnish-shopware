@@ -1,4 +1,4 @@
-FROM varnish:8.0.0-alpine
+FROM varnish:8.0.1-alpine
 
 # install build dependencies
 USER root
