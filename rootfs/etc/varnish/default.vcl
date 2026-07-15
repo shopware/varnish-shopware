@@ -70,6 +70,12 @@ sub vcl_recv {
         return (pass);
     }
 
+    # Static assets don't need cookies. Strip them before parsing when assets
+    # are served from the same domain as the storefront.
+    if (req.url ~ "^/(media|thumbnail|theme|bundles)/") {
+        unset req.http.Cookie;
+    }
+
     cookie.parse(req.http.cookie);
 
     # set cache-hash cookie value to header for hashing based on vary header
