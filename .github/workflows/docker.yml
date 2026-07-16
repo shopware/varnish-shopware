@@ -8,10 +8,19 @@ on:
     branches:
       - main
     paths:
-      - Dockerfile
+      - .github/workflows/docker.yml
+      - 6.7/**
+      - 6.8/**
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - version: "6.7"
+            tags: ghcr.io/shopware/varnish:latest,ghcr.io/shopware/varnish:6.7
+          - version: "6.8"
+            tags: ghcr.io/shopware/varnish:6.8
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -28,9 +37,10 @@ jobs:
       - name: Build Docker Images
         uses: docker/build-push-action@v7
         with:
-          tags: ghcr.io/shopware/varnish:latest, ghcr.io/shopware/varnish:6.7
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          context: ${{ matrix.version }}
+          tags: ${{ matrix.tags }}
+          cache-from: type=gha,scope=${{ matrix.version }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.version }}
           platforms: linux/amd64,linux/arm64
           push: true
           provenance: false

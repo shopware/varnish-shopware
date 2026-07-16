@@ -5,6 +5,10 @@ updates:
     schedule:
       interval: "weekly"
   - package-ecosystem: "docker"
-    directory: "/"
+    directory: "/6.7"
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "docker"
+    directory: "/6.8"
     schedule:
       interval: "daily"
