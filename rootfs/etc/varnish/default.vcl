@@ -70,6 +70,13 @@ sub vcl_recv {
         return (pass);
     }
 
+    # Static assets don't need any cookie. Stripping them ensures a stable cache
+    # key when assets are served from the same domain as the storefront, so the
+    # hash does not vary based on sw-cache-hash or sw-currency.
+    if (req.url ~ "^/(media|thumbnail|theme|bundles)/") {
+        unset req.http.Cookie;
+    }
+
     cookie.parse(req.http.cookie);
 
     # set cache-hash cookie value to header for hashing based on vary header
