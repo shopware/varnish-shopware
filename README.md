@@ -121,11 +121,14 @@ services:
 There are tags for all supported Shopware versions available, e.g. `6.7`, or unreleased versions like `6.8`.
 A list of available tags can be viewed at <https://ghcr.io/shopware/varnish>.
 
-### Branching
+### Repository layout
 
-The `main` branch always contains the latest version of Shopware.
-When there is a breaking change in the config a new branch is created for the upcoming Shopware version, e.g. `6.8`. 
-Once the Shopware version is released, the branch is merged back into `main`, and the older version is maintained via a separate branch, e.g. `6.7`.
+The `main` branch contains one Docker build context per Shopware version:
+
+- `6.7/` builds the `6.7` and `latest` image tags.
+- `6.8/` builds the `6.8` image tag.
+
+Build a specific version by passing its directory as the Docker context, for example `docker build 6.8`.
 
 ## Further information
 

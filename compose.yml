@@ -1,7 +1,7 @@
 services:
   varnish:
     image: local/varnish
-    build: .
+    build: ./6.7
     environment:
       SHOPWARE_BACKEND_HOST: host.docker.internal
       SHOPWARE_ALLOWED_PURGER_IP: '"172.17.0.0"/24'
@@ -9,5 +9,5 @@ services:
       - "80:80"
     develop:
       watch:
-        - path: rootfs
+        - path: 6.7/rootfs
           action: rebuild
