@@ -145,6 +145,10 @@ sub vcl_backend_response {
 }
 
 sub vcl_deliver {
+    if (req.url ~ "^/(media|thumbnail|theme|bundles)/") {
+        set resp.http.Content-Security-Policy = "script-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'";
+    }
+
     unset resp.http.xkey;
     unset resp.http.X-Varnish;
     unset resp.http.Via;

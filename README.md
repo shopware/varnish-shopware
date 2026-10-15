@@ -3,6 +3,19 @@
 The image bases on the official [Varnish image](https://hub.docker.com/_/varnish) and contains the Shopware default VCL.
 The containing VCL is for the usage with xkeys.
 
+## Static asset Content Security Policy
+
+Responses under `/media/`, `/thumbnail/`, `/theme/` and `/bundles/` receive `Content-Security-Policy: script-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'`, including cache hits and error responses. This applies to every file type in these directories. Bundled HTML applications cannot execute scripts, submit forms or embed documents. Application responses outside these paths retain their existing policy.
+
+Run the regression checks against either version's image:
+
+```sh
+docker build -t shopware-varnish-csp-test 6.7
+docker run --rm --entrypoint sh -v "$PWD":/source:ro -w /source shopware-varnish-csp-test tests/static-assets.sh 6.7/rootfs/etc/varnish/default.vcl
+```
+
+Use `6.8` in both paths to check that version.
+
 <details>
   <summary>Config for Shopware 6.7</summary>
 
