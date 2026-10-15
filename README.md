@@ -5,7 +5,7 @@ The containing VCL is for the usage with xkeys.
 
 ## Static asset Content Security Policy
 
-Responses under `/media/`, `/thumbnail/`, `/theme/` and `/bundles/` receive `Content-Security-Policy: script-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'`, including cache hits and error responses. This applies to every file type in these directories. Bundled HTML applications cannot execute scripts, submit forms or embed documents. Application responses outside these paths retain their existing policy.
+Responses under `/media/` and `/thumbnail/` receive `Content-Security-Policy: script-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'`, including cache hits and error responses. This applies to every file type in these directories. HTML documents in these paths cannot execute scripts, submit forms or embed documents. Responses outside these paths retain their existing policy.
 
 <details>
   <summary>Config for Shopware 6.7</summary>

@@ -175,7 +175,7 @@ sub vcl_backend_response {
 }
 
 sub vcl_deliver {
-    if (req.url ~ "^/(media|thumbnail|theme|bundles)/") {
+    if (req.url ~ "^/(media|thumbnail)/") {
         set resp.http.Content-Security-Policy = "script-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'";
     }
 
