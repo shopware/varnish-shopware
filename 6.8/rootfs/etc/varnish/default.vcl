@@ -84,6 +84,11 @@ sub vcl_recv {
         set req.http.sw-cache-hash = cookie.get("sw-cache-hash");
     }
 
+    # The widget must reach Shopware to store tracking codes in the session.
+    if (req.url ~ "^/([^?]+/)?widgets/checkout/info[?]([^&]*&)*(affiliateCode|campaignCode)=") {
+        return (pass);
+    }
+
     # as soon as the cart is filled we get a cache hash
     if (req.url == "/widgets/checkout/info" && req.http.sw-cache-hash == "") {
         return (synth(204, ""));
