@@ -84,6 +84,11 @@ sub vcl_recv {
         set req.http.sw-cache-hash = cookie.get("sw-cache-hash");
     }
 
+    # The widget must reach Shopware to store tracking codes in the session.
+    if (req.url ~ "^/([^?]+/)?widgets/checkout/info[?]([^&]*&)*(affiliateCode|campaignCode)=") {
+        return (pass);
+    }
+
     # as soon as the cart is filled we get a cache hash
     if (req.url == "/widgets/checkout/info" && req.http.sw-cache-hash == "") {
         return (synth(204, ""));
@@ -111,6 +116,28 @@ sub vcl_recv {
     }
 
     return (hash);
+}
+
+sub vcl_hash {
+    if (req.url ~ "^[^?]*[?]([^&]*&)*(affiliateCode|campaignCode)=") {
+        # Normalize the cache key while keeping the original tracking codes for Shopware.
+        hash_data(regsub(
+            regsub(req.url, "[?].*$", "?") +
+            regsub(regsuball(
+                regsub(req.url, "^[^?]*[?]", ""),
+                "(?:^|(?<=&))(?:affiliateCode|campaignCode)=[^&]*&?",
+                ""
+            ), "&$", ""),
+            "^([^?]*)[?]$",
+            "\1"
+        ));
+        if (req.http.host) {
+            hash_data(req.http.host);
+        } else {
+            hash_data(server.ip);
+        }
+        return (lookup);
+    }
 }
 
 sub vcl_backend_response {
